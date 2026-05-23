@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}PeerView — Real-time Interview Practice{% endblock %}
+{% block bodyclass %}page-home{% endblock %}
+
+{% block content %}
+<nav class="nav">
+  <div class="brand">Peer<span>View</span></div>
+  <div class="nav-actions">
+    <a href="{% url 'login' %}" class="btn btn-ghost btn-sm">Kirish</a>
+    <a href="{% url 'register' %}" class="btn btn-primary btn-sm">Boshlash</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-eyebrow">🎯 MVP — WebRTC Video Interview</div>
+  <h1>Bir-biringiz bilan<br><em>jonli suhbat</em> qiling</h1>
+  <p class="hero-sub">
+    Ikki kishi xona yaratadi, link ulashadi — kamera va mikrofon
+    to'g'ridan-to'g'ri peer-to-peer ulanadi. Hech qanday server video uzatmaydi.
+  </p>
+  <div class="hero-cta">
+    <a href="{% url 'register' %}" class="btn btn-primary">Hozir boshlash →</a>
+    <a href="{% url 'login' %}" class="btn btn-ghost">Hisobim bor</a>
+  </div>
+</section>
+
+<div class="features">
+  <div class="feature-box">
+    <div class="feature-icon">📹</div>
+    <h3>WebRTC P2P Video</h3>
+    <p>Video serverni aylab o'tmaydi — to'g'ridan-to'g'ri brauzerdan brauzerga. Kam kechikish.</p>
+  </div>
+  <div class="feature-box">
+    <div class="feature-icon">🔒</div>
+    <h3>Xavfsiz kanal</h3>
+    <p>Django Channels orqali signal almashinuvi. Faqat siz va partnyoringiz ko'radi.</p>
+  </div>
+  <div class="feature-box">
+    <div class="feature-icon">⚡</div>
+    <h3>Tez ulanish</h3>
+    <p>Xona yarating, linkni ulashing — 10 soniyada video aloqa tayyor.</p>
+  </div>
+</div>
+{% endblock %}

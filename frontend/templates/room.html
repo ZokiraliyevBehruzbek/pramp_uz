@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+{% block title %}Xona — PeerView{% endblock %}
+{% block bodyclass %}page-room{% endblock %}
+
+{% block content %}
+<!-- Top bar -->
+<header class="room-bar">
+  <a href="/dashboard/" class="brand" style="text-decoration:none">Peer<span>View</span></a>
+
+  <div class="room-status">
+    <div class="status-dot waiting" id="status-dot"></div>
+    <span id="status-text">Partnyorni kutmoqda…</span>
+  </div>
+
+  <div class="room-controls">
+    <!-- Mic toggle -->
+    <button class="ctrl-btn" id="btn-mic" title="Mikrofon" onclick="toggleMic()">🎤</button>
+    <!-- Camera toggle -->
+    <button class="ctrl-btn" id="btn-cam" title="Kamera" onclick="toggleCam()">📹</button>
+    <!-- Copy link -->
+    <button class="ctrl-btn" title="Linkni nusxalash" onclick="copyLink()">🔗</button>
+    <!-- Leave -->
+    <a href="/dashboard/" class="btn btn-ghost btn-sm" onclick="RTC.hangup()">Chiqish</a>
+    {% if is_host %}
+    <button class="btn btn-danger btn-sm" onclick="endRoom()">Tugatish</button>
+    {% endif %}
+  </div>
+</header>
+
+<!-- Layout -->
+<div class="room-layout">
+
+  <!-- Left sidebar: two video slots -->
+  <aside class="video-sidebar">
+    <div class="video-stack">
+
+      <!-- Local video -->
+      <div class="video-slot mirror" id="local-slot">
+        <video id="local-video" autoplay muted playsinline></video>
+        <div class="video-name">{{ request.user.username }} (Siz)</div>
+        <!-- shown if cam blocked -->
+        <div class="video-overlay" id="local-overlay" style="display:none">
+          <div class="cam-placeholder">😶</div>
+          <p>Kameraga ruxsat berilmagan</p>
+        </div>
+      </div>
+
+      <!-- Remote video -->
+      <div class="video-slot" id="remote-slot">
+        <video id="remote-video" autoplay playsinline></video>
+        <div class="video-name" id="remote-name" style="display:none"></div>
+        <div class="video-overlay" id="remote-overlay">
+          <div class="cam-placeholder">👤</div>
+          <p>Partnyorni kutmoqda…</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Invite link -->
+    <div class="invite-box">
+      <label style="margin-bottom:8px;">Xona linki</label>
+      <div class="invite-row">
+        <input type="text" id="invite-input" readonly value="{{ request.scheme }}://{{ request.get_host }}/room/{{ room.room_id }}/">
+        <button class="btn btn-ghost btn-sm" onclick="copyLink()">Nusxa</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Right: info / waiting state -->
+  <main class="room-main">
+    <div class="room-main-inner">
+      <div class="waiting-state" id="waiting-state">
+        <div class="waiting-icon">📡</div>
+        <h2>Ulanish kutilmoqda</h2>
+        <p>Linkni partnyoringizga yuboring. U kirishi bilan video aloqa avtomatik boshlanadi.</p>
+        <button class="btn btn-primary" onclick="copyLink()">🔗 Linkni nusxalash</button>
+      </div>
+
+      <div id="connected-state" style="display:none;flex-direction:column;align-items:center;gap:16px;">
+        <div style="font-size:2rem">✅</div>
+        <h2 style="color:var(--accent)" id="connected-msg">Ulandi!</h2>
+        <p style="color:var(--muted);text-align:center">P2P video aloqa o'rnatildi.<br>Video oynalarni chapda ko'rishingiz mumkin.</p>
+      </div>
+    </div>
+
+    <div class="room-info-bar">
+      <span>Xona ID: <code style="font-family:var(--font-mono)">{{ room.room_id }}</code></span>
+      <span id="conn-state-label">Ulanish holati: —</span>
+    </div>
+  </main>
+</div>
+
+<div id="toast"></div>
+{% endblock %}
+
+{% block scripts %}
+{% load static %}
+<script src="{% static 'js/webrtc.js' %}"></script>
+<script>
+const ROOM_ID   = "{{ room.room_id }}";
+const MY_NAME   = "{{ request.user.username }}";
+const IS_HOST   = {{ is_host|yesno:"true,false" }};
+
+/* ── UI helpers ─────────────────────────────────────── */
+function setStatus(text, dotClass) {
+  document.getElementById('status-text').textContent = text;
+  const dot = document.getElementById('status-dot');
+  dot.className = 'status-dot ' + (dotClass || '');
+}
+
+function showConnected(partnerName) {
+  document.getElementById('waiting-state').style.display   = 'none';
+  document.getElementById('connected-state').style.display = 'flex';
+  document.getElementById('connected-msg').textContent     = partnerName + ' ulandi!';
+  document.getElementById('remote-overlay').style.display  = 'none';
+  document.getElementById('remote-name').style.display     = 'block';
+  document.getElementById('remote-name').textContent       = partnerName;
+  setStatus(partnerName + ' bilan ulangansiz', 'connected');
+}
+
+function showDisconnected() {
+  document.getElementById('waiting-state').style.display   = 'flex';
+  document.getElementById('connected-state').style.display = 'none';
+  document.getElementById('remote-overlay').style.display  = 'flex';
+  document.getElementById('remote-name').style.display     = 'none';
+  setStatus('Partnyorni kutmoqda…', 'waiting');
+  showToast('Partnyor uzildi');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* ── Media toggles ──────────────────────────────────── */
+function toggleMic() {
+  const on = RTC.toggleMic();
+  const btn = document.getElementById('btn-mic');
+  btn.textContent = on ? '🎤' : '🔇';
+  btn.classList.toggle('off', !on);
+  showToast(on ? 'Mikrofon yoqildi' : 'Mikrofon o\'chirildi');
+}
+
+function toggleCam() {
+  const on = RTC.toggleCam();
+  const btn = document.getElementById('btn-cam');
+  btn.textContent = on ? '📹' : '🚫';
+  btn.classList.toggle('off', !on);
+  showToast(on ? 'Kamera yoqildi' : 'Kamera o\'chirildi');
+}
+
+/* ── Copy link ──────────────────────────────────────── */
+function copyLink() {
+  const link = document.getElementById('invite-input').value;
+  navigator.clipboard.writeText(link).then(() => showToast('Link nusxalandi! ✓'));
+}
+
+/* ── End room (host only) ───────────────────────────── */
+async function endRoom() {
+  if (!confirm('Xonani tugatishni tasdiqlaysizmi?')) return;
+  RTC.hangup();
+  await fetch(`/api/rooms/{{ room.room_id }}/close/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+  });
+  window.location.href = '/dashboard/';
+}
+
+function getCookie(name) {
+  const m = document.cookie.match('(^|;)\\s*' + name + '=([^;]+)');
+  return m ? m[2] : '';
+}
+
+/* ── Boot WebRTC ────────────────────────────────────── */
+RTC.init({
+  roomId: ROOM_ID,
+  localVideoEl:  document.getElementById('local-video'),
+  remoteVideoEl: document.getElementById('remote-video'),
+
+  statusCb: (state) => {
+    const label = document.getElementById('conn-state-label');
+    label.textContent = 'Ulanish holati: ' + state;
+
+    if (state === 'camera_error') {
+      document.getElementById('local-overlay').style.display = 'flex';
+    }
+    if (state === 'camera_ok') {
+      document.getElementById('local-overlay').style.display = 'none';
+    }
+  },
+
+  joinedCb: (name) => showConnected(name || 'Partnyor'),
+  leftCb:   ()     => showDisconnected(),
+});
+
+/* Auto-focus room, clean up on page leave */
+window.addEventListener('beforeunload', () => RTC.hangup());
+</script>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Kirish — PeerView{% endblock %}
+{% block bodyclass %}page-auth{% endblock %}
+
+{% block content %}
+<div class="auth-card">
+  <a href="/" class="brand">Peer<span>View</span></a>
+  <h1>Xush kelibsiz</h1>
+  <p class="subtitle">Hisobingizga kiring</p>
+
+  {% if error %}
+  <div class="alert alert-error">{{ error }}</div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+      <label>Username</label>
+      <input name="username" type="text" placeholder="username" autofocus required>
+    </div>
+    <div class="form-group">
+      <label>Parol</label>
+      <input name="password" type="password" placeholder="••••••••" required>
+    </div>
+    <button type="submit" class="btn btn-primary btn-full">Kirish</button>
+  </form>
+
+  <p class="switch">Hisob yo'qmi? <a href="{% url 'register' %}">Ro'yxatdan o'ting</a></p>
+</div>
+{% endblock %}
