@@ -1,44 +1,37 @@
 {% extends 'base.html' %}
-{% block title %}PeerView — Real-time Interview Practice{% endblock %}
+{% block title %}PeerView{% endblock %}
 {% block bodyclass %}page-home{% endblock %}
-
 {% block content %}
 <nav class="nav">
   <div class="brand">Peer<span>View</span></div>
-  <div class="nav-actions">
+  <div class="nav-r">
     <a href="{% url 'login' %}" class="btn btn-ghost btn-sm">Kirish</a>
-    <a href="{% url 'register' %}" class="btn btn-primary btn-sm">Boshlash</a>
+    <a href="{% url 'register' %}" class="btn btn-primary btn-sm">Ro'yxatdan o'tish</a>
   </div>
 </nav>
-
 <section class="hero">
-  <div class="hero-eyebrow">🎯 MVP — WebRTC Video Interview</div>
-  <h1>Bir-biringiz bilan<br><em>jonli suhbat</em> qiling</h1>
-  <p class="hero-sub">
-    Ikki kishi xona yaratadi, link ulashadi — kamera va mikrofon
-    to'g'ridan-to'g'ri peer-to-peer ulanadi. Hech qanday server video uzatmaydi.
-  </p>
-  <div class="hero-cta">
-    <a href="{% url 'register' %}" class="btn btn-primary">Hozir boshlash →</a>
-    <a href="{% url 'login' %}" class="btn btn-ghost">Hisobim bor</a>
+  <h1>Mock interview <span>platformasi</span></h1>
+  <p>Ikki kishi real vaqtda ulashadi — video, notepad va savol banki bilan. Hech qanday uchinchi tomon yo'q.</p>
+  <div class="hero-btns">
+    <a href="{% url 'register' %}" class="btn btn-primary">Boshlash</a>
+    <a href="{% url 'login' %}" class="btn btn-ghost">Kirish</a>
   </div>
 </section>
-
-<div class="features">
-  <div class="feature-box">
-    <div class="feature-icon">📹</div>
-    <h3>WebRTC P2P Video</h3>
-    <p>Video serverni aylab o'tmaydi — to'g'ridan-to'g'ri brauzerdan brauzerga. Kam kechikish.</p>
+<div class="feats">
+  <div class="feat">
+    <div class="feat-ico">📹</div>
+    <h3>WebRTC video</h3>
+    <p>P2P — video server orqali o'tmaydi.</p>
   </div>
-  <div class="feature-box">
-    <div class="feature-icon">🔒</div>
-    <h3>Xavfsiz kanal</h3>
-    <p>Django Channels orqali signal almashinuvi. Faqat siz va partnyoringiz ko'radi.</p>
+  <div class="feat">
+    <div class="feat-ico">📝</div>
+    <h3>Notepad</h3>
+    <p>Har biri o'zi uchun alohida yozadi.</p>
   </div>
-  <div class="feature-box">
-    <div class="feature-icon">⚡</div>
-    <h3>Tez ulanish</h3>
-    <p>Xona yarating, linkni ulashing — 10 soniyada video aloqa tayyor.</p>
+  <div class="feat">
+    <div class="feat-ico">⏱</div>
+    <h3>Timer + Savollar</h3>
+    <p>6 kategoriya, 3 daraja — tayyor savollar.</p>
   </div>
 </div>
 {% endblock %}

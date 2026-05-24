@@ -1,39 +1,44 @@
 {% extends 'base.html' %}
 {% block title %}Dashboard — PeerView{% endblock %}
 {% block bodyclass %}page-dash{% endblock %}
-
 {% block content %}
-<nav class="dash-nav">
+<nav class="nav">
   <div class="brand">Peer<span>View</span></div>
-  <div class="dash-user">
-    <div class="avatar">{{ request.user.username|first|upper }}</div>
-    <span>{{ request.user.username }}</span>
+  <div class="nav-r">
+    <div class="upill">
+      <div class="ava">{{ request.user.username|first|upper }}</div>
+      <span>{{ request.user.username }}</span>
+    </div>
     <a href="{% url 'logout' %}" class="btn btn-ghost btn-sm">Chiqish</a>
   </div>
 </nav>
 
 <div class="dash-body">
-  <!-- LEFT: Create room -->
+  <!-- Chap: xona yaratish -->
   <div>
-    <div class="card" style="margin-bottom:24px;">
+    <div class="card" style="margin-bottom:16px">
       <div class="card-title">Yangi xona yaratish</div>
-      <p style="color:var(--muted);font-size:14px;margin-bottom:20px;">
-        Xona yarating va linkni do'stingizga ulashing. U kirganda video ulanish avtomatik boshlanadi.
-      </p>
-      <button class="btn btn-primary btn-full" id="btn-create" onclick="createRoom()">
-        + Xona yaratish
-      </button>
+      <div class="fg">
+        <label>Xona nomi</label>
+        <input id="inp-name" placeholder="masalan: Python interview" maxlength="50">
+      </div>
+      <div class="fg">
+        <label>Parol</label>
+        <input id="inp-pass" type="password" placeholder="xonaga kirish paroli">
+      </div>
+      <div id="create-err" style="color:#f87171;font-size:12px;margin-bottom:8px;display:none"></div>
+      <button class="btn btn-primary btn-full" id="btn-create" onclick="createRoom()">+ Yaratish</button>
     </div>
 
-    <!-- My rooms -->
     {% if my_rooms %}
     <div class="card">
       <div class="card-title">Mening xonalarim</div>
       {% for room in my_rooms %}
-      <div class="room-item">
-        <span class="room-host" style="font-family:var(--font-mono);font-size:12px;">
-          {{ room.room_id|stringformat:"s"|slice:":8" }}…
-        </span>
+      <div class="room-row">
+        <div>
+          <div class="rname">{{ room.name }}</div>
+          <div class="rmeta">{{ room.created_at|date:"d.m H:i" }}</div>
+        </div>
         <a href="{% url 'room' room.room_id %}" class="btn btn-ghost btn-sm">Kirish</a>
       </div>
       {% endfor %}
@@ -41,77 +46,65 @@
     {% endif %}
   </div>
 
-  <!-- RIGHT: Open rooms -->
+  <!-- O'ng: ochiq xonalar -->
   <div class="card">
-    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
       <span>Ochiq xonalar</span>
-      <button onclick="loadOpenRooms()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;">↺ Yangilash</button>
+      <button onclick="loadRooms()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:11px">↺ Yangilash</button>
     </div>
-
-    <div id="open-rooms-list">
+    <div id="rooms-list">
       {% if open_rooms %}
         {% for room in open_rooms %}
-        <div class="room-item">
+        <div class="room-row">
           <div>
-            <div style="font-weight:600;font-size:14px;">{{ room.host.username }}</div>
-            <div class="room-host">xona yaratdi</div>
+            <div class="rname">{{ room.name }}</div>
+            <div class="rmeta">{{ room.host.username }} · {{ room.created_at|date:"d.m H:i" }}</div>
           </div>
-          <a href="{% url 'room' room.room_id %}" class="btn btn-primary btn-sm">Qo'shilish</a>
+          <a href="{% url 'room' room.room_id %}" class="btn btn-primary btn-sm">Kirish</a>
         </div>
         {% endfor %}
       {% else %}
-        <div class="empty">Hozircha ochiq xona yo'q.<br>Birinchi bo'lib xona yarating!</div>
+        <div class="empty">Ochiq xona yo'q.<br>Birinchi bo'lib yarating!</div>
       {% endif %}
     </div>
   </div>
 </div>
-
 <div id="toast"></div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-function getCookie(name) {
-  const m = document.cookie.match('(^|;)\\s*' + name + '=([^;]+)');
-  return m ? m[2] : '';
-}
+function getCookie(n){const m=document.cookie.match('(^|;)\\s*'+n+'=([^;]+)');return m?m[2]:'';}
 
-async function createRoom() {
-  const btn = document.getElementById('btn-create');
-  btn.textContent = 'Yaratilmoqda…';
-  btn.disabled = true;
-
-  const res = await fetch('/api/rooms/create/', {
-    method: 'POST',
-    headers: { 'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json' }
+async function createRoom(){
+  const name=document.getElementById('inp-name').value.trim();
+  const pass=document.getElementById('inp-pass').value.trim();
+  const err=document.getElementById('create-err');
+  err.style.display='none';
+  if(!name){err.textContent='Xona nomini kiriting';err.style.display='block';return;}
+  if(!pass){err.textContent='Parolni kiriting';err.style.display='block';return;}
+  const btn=document.getElementById('btn-create');
+  btn.textContent='Yaratilmoqda…';btn.disabled=true;
+  const res=await fetch('/api/rooms/create/',{
+    method:'POST',
+    headers:{'X-CSRFToken':getCookie('csrftoken'),'Content-Type':'application/json'},
+    body:JSON.stringify({name,password:pass})
   });
-  const data = await res.json();
-  if (data.room_id) {
-    window.location.href = `/room/${data.room_id}/`;
-  } else {
-    btn.textContent = '+ Xona yaratish';
-    btn.disabled = false;
-  }
+  const data=await res.json();
+  if(data.room_id){window.location.href='/room/'+data.room_id+'/';}
+  else{err.textContent=data.error||'Xato';err.style.display='block';btn.textContent='+ Yaratish';btn.disabled=false;}
 }
 
-async function loadOpenRooms() {
-  const res = await fetch('/api/rooms/open/');
-  const rooms = await res.json();
-  const el = document.getElementById('open-rooms-list');
-
-  if (!rooms.length) {
-    el.innerHTML = '<div class="empty">Hozircha ochiq xona yo\'q.</div>';
-    return;
-  }
-  el.innerHTML = rooms.map(r => `
-    <div class="room-item">
-      <div>
-        <div style="font-weight:600;font-size:14px;">${r.host}</div>
-        <div class="room-host">xona yaratdi</div>
-      </div>
-      <a href="/room/${r.room_id}/" class="btn btn-primary btn-sm">Qo'shilish</a>
-    </div>
-  `).join('');
+async function loadRooms(){
+  const res=await fetch('/api/rooms/open/');
+  const rooms=await res.json();
+  const el=document.getElementById('rooms-list');
+  if(!rooms.length){el.innerHTML='<div class="empty">Ochiq xona yo\'q.</div>';return;}
+  el.innerHTML=rooms.map(r=>`
+    <div class="room-row">
+      <div><div class="rname">${r.name}</div><div class="rmeta">${r.host}</div></div>
+      <a href="/room/${r.room_id}/" class="btn btn-primary btn-sm">Kirish</a>
+    </div>`).join('');
 }
 </script>
 {% endblock %}

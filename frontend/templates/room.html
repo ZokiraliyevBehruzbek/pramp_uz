@@ -1,202 +1,272 @@
 {% extends 'base.html' %}
-{% block title %}Xona — PeerView{% endblock %}
+{% block title %}{{ room.name }} — PeerView{% endblock %}
 {% block bodyclass %}page-room{% endblock %}
 
 {% block content %}
-<!-- Top bar -->
 <header class="room-bar">
   <a href="/dashboard/" class="brand" style="text-decoration:none">Peer<span>View</span></a>
-
-  <div class="room-status">
-    <div class="status-dot waiting" id="status-dot"></div>
-    <span id="status-text">Partnyorni kutmoqda…</span>
+  <div class="conn-st">
+    <div class="dot waiting" id="sdot"></div>
+    <span id="stxt">Partnyorni kutmoqda…</span>
   </div>
-
-  <div class="room-controls">
-    <!-- Mic toggle -->
-    <button class="ctrl-btn" id="btn-mic" title="Mikrofon" onclick="toggleMic()">🎤</button>
-    <!-- Camera toggle -->
-    <button class="ctrl-btn" id="btn-cam" title="Kamera" onclick="toggleCam()">📹</button>
-    <!-- Copy link -->
-    <button class="ctrl-btn" title="Linkni nusxalash" onclick="copyLink()">🔗</button>
-    <!-- Leave -->
-    <a href="/dashboard/" class="btn btn-ghost btn-sm" onclick="RTC.hangup()">Chiqish</a>
+  <div class="room-acts">
+    <button class="ibtn" id="btn-mic" onclick="toggleMic()" title="Mikrofon">🎤</button>
+    <button class="ibtn" id="btn-cam" onclick="toggleCam()" title="Kamera">📹</button>
+    <button class="ibtn" onclick="copyLink()" title="Linkni nusxalash">🔗</button>
     {% if is_host %}
     <button class="btn btn-danger btn-sm" onclick="endRoom()">Tugatish</button>
     {% endif %}
+    <a href="/dashboard/" class="btn btn-ghost btn-sm" onclick="RTC.hangup()">Chiqish</a>
   </div>
 </header>
 
-<!-- Layout -->
 <div class="room-layout">
 
-  <!-- Left sidebar: two video slots -->
-  <aside class="video-sidebar">
-    <div class="video-stack">
-
-      <!-- Local video -->
-      <div class="video-slot mirror" id="local-slot">
-        <video id="local-video" autoplay muted playsinline></video>
-        <div class="video-name">{{ request.user.username }} (Siz)</div>
-        <!-- shown if cam blocked -->
-        <div class="video-overlay" id="local-overlay" style="display:none">
-          <div class="cam-placeholder">😶</div>
-          <p>Kameraga ruxsat berilmagan</p>
+  <!-- VIDEO -->
+  <aside class="vcol">
+    <div class="vstack">
+      <div class="vslot mirror">
+        <video id="lv" autoplay muted playsinline></video>
+        <div class="vlabel">{{ request.user.username }} (Siz)</div>
+        <div class="vover" id="lover" style="display:none">
+          <div class="vi">🚫</div><p>Kameraga ruxsat yo'q</p>
         </div>
       </div>
-
-      <!-- Remote video -->
-      <div class="video-slot" id="remote-slot">
-        <video id="remote-video" autoplay playsinline></video>
-        <div class="video-name" id="remote-name" style="display:none"></div>
-        <div class="video-overlay" id="remote-overlay">
-          <div class="cam-placeholder">👤</div>
-          <p>Partnyorni kutmoqda…</p>
+      <div class="vslot">
+        <video id="rv" autoplay playsinline></video>
+        <div class="vlabel" id="rlabel" style="display:none"></div>
+        <div class="vover" id="rover">
+          <div class="vi">👤</div><p>Partnyorni kutmoqda…</p>
         </div>
       </div>
-
     </div>
-
-    <!-- Invite link -->
-    <div class="invite-box">
-      <label style="margin-bottom:8px;">Xona linki</label>
-      <div class="invite-row">
-        <input type="text" id="invite-input" readonly value="{{ request.scheme }}://{{ request.get_host }}/room/{{ room.room_id }}/">
+    <div class="inv-strip">
+      <label>Xona linki</label>
+      <div class="inv-row">
+        <input id="inv-url" readonly
+          value="{{ request.scheme }}://{{ request.get_host }}/room/{{ room.room_id }}/">
         <button class="btn btn-ghost btn-sm" onclick="copyLink()">Nusxa</button>
       </div>
     </div>
   </aside>
 
-  <!-- Right: info / waiting state -->
-  <main class="room-main">
-    <div class="room-main-inner">
-      <div class="waiting-state" id="waiting-state">
-        <div class="waiting-icon">📡</div>
-        <h2>Ulanish kutilmoqda</h2>
-        <p>Linkni partnyoringizga yuboring. U kirishi bilan video aloqa avtomatik boshlanadi.</p>
-        <button class="btn btn-primary" onclick="copyLink()">🔗 Linkni nusxalash</button>
-      </div>
+  <!-- NOTEPAD — har biri o'zi uchun, sinxronlanmaydi -->
+  <div class="ccol">
+    <div class="ccol-head">
+      <span>📝 Notepad — faqat siz ko'rasiz</span>
+      <span style="font-size:11px;color:var(--muted)">{{ room.name }}</span>
+    </div>
+    <textarea class="notepad" id="notepad"
+      placeholder="Bu yerga yozgan narsalaringiz faqat SIZGA ko'rinadi. Partnyoringiz o'z notepadiga yozadi.&#10;&#10;Savol muhokamasi, g'oyalar, eslatmalar…"></textarea>
+  </div>
 
-      <div id="connected-state" style="display:none;flex-direction:column;align-items:center;gap:16px;">
-        <div style="font-size:2rem">✅</div>
-        <h2 style="color:var(--accent)" id="connected-msg">Ulandi!</h2>
-        <p style="color:var(--muted);text-align:center">P2P video aloqa o'rnatildi.<br>Video oynalarni chapda ko'rishingiz mumkin.</p>
+  <!-- TIMER + QUESTIONS -->
+  <aside class="rcol">
+
+    <!-- Timer -->
+    <div class="timer-blk">
+      <div class="tlabel">⏱ Timer</div>
+      <div class="tdisp" id="tdisp">00:00</div>
+      <div class="tsetup">
+        <input type="number" id="tmin" value="45" min="1" max="180" placeholder="daqiqa">
+      </div>
+      <div class="tbtns">
+        <button class="btn btn-primary btn-sm" id="tbtn" onclick="timerToggle()" style="flex:1">▶ Boshlash</button>
+        <button class="btn btn-ghost btn-sm" onclick="timerReset()">↺</button>
       </div>
     </div>
 
-    <div class="room-info-bar">
-      <span>Xona ID: <code style="font-family:var(--font-mono)">{{ room.room_id }}</code></span>
-      <span id="conn-state-label">Ulanish holati: —</span>
+    <!-- Questions -->
+    <div class="qblk">
+      <div class="qhead">
+        <div class="qhead-row">
+          <div class="qlabel">📋 Savollar</div>
+        </div>
+        <div class="qfilters">
+          <select id="qtopic" onchange="renderQ()" style="flex:1">
+            <option value="backend">Backend</option>
+            <option value="frontend">Frontend</option>
+            <option value="dsa">DSA / Algoritmlar</option>
+            <option value="system">System Design</option>
+            <option value="python">Python</option>
+            <option value="javascript">JavaScript</option>
+          </select>
+          <select id="qdiff" onchange="renderQ()" style="width:85px">
+            <option value="all">Barchasi</option>
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
+      </div>
+      <div class="qlist" id="qlist"></div>
+      <div class="qdetail" id="qdetail">
+        <span class="qback" onclick="closeQ()">← Orqaga</span>
+        <div class="qdtitle" id="qdtitle"></div>
+        <div class="qddesc" id="qddesc"></div>
+      </div>
     </div>
-  </main>
+
+  </aside>
 </div>
-
 <div id="toast"></div>
 {% endblock %}
 
 {% block scripts %}
 {% load static %}
+<script src="{% static 'js/questions.js' %}"></script>
 <script src="{% static 'js/webrtc.js' %}"></script>
 <script>
-const ROOM_ID   = "{{ room.room_id }}";
-const MY_NAME   = "{{ request.user.username }}";
-const IS_HOST   = {{ is_host|yesno:"true,false" }};
+const ROOM_ID = "{{ room.room_id }}";
+const MY_NAME = "{{ request.user.username }}";
+const IS_HOST = {% if is_host %}true{% else %}false{% endif %};
 
-/* ── UI helpers ─────────────────────────────────────── */
-function setStatus(text, dotClass) {
-  document.getElementById('status-text').textContent = text;
-  const dot = document.getElementById('status-dot');
-  dot.className = 'status-dot ' + (dotClass || '');
+/* toast */
+function toast(m){
+  const el=document.getElementById('toast');
+  el.textContent=m; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2600);
 }
 
-function showConnected(partnerName) {
-  document.getElementById('waiting-state').style.display   = 'none';
-  document.getElementById('connected-state').style.display = 'flex';
-  document.getElementById('connected-msg').textContent     = partnerName + ' ulandi!';
-  document.getElementById('remote-overlay').style.display  = 'none';
-  document.getElementById('remote-name').style.display     = 'block';
-  document.getElementById('remote-name').textContent       = partnerName;
-  setStatus(partnerName + ' bilan ulangansiz', 'connected');
+/* status */
+function setSt(t,c){
+  document.getElementById('stxt').textContent=t;
+  document.getElementById('sdot').className='dot '+(c||'');
 }
 
-function showDisconnected() {
-  document.getElementById('waiting-state').style.display   = 'flex';
-  document.getElementById('connected-state').style.display = 'none';
-  document.getElementById('remote-overlay').style.display  = 'flex';
-  document.getElementById('remote-name').style.display     = 'none';
-  setStatus('Partnyorni kutmoqda…', 'waiting');
-  showToast('Partnyor uzildi');
+/* ── Timer ── */
+let tSec=0, tRun=false, tIv=null;
+
+function timerToggle(){
+  const btn=document.getElementById('tbtn');
+  if(tRun){
+    clearInterval(tIv); tRun=false;
+    btn.textContent='▶ Davom'; btn.className='btn btn-primary btn-sm';
+  } else {
+    if(tSec===0){
+      const m=parseInt(document.getElementById('tmin').value)||45;
+      tSec=m*60;
+    }
+    tRun=true; btn.textContent='⏸ Pauza'; btn.className='btn btn-danger btn-sm';
+    tIv=setInterval(timerTick,1000);
+  }
 }
 
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
+function timerTick(){
+  if(tSec<=0){clearInterval(tIv);tRun=false;document.getElementById('tbtn').textContent='▶ Boshlash';toast('⏰ Vaqt tugadi!');return;}
+  tSec--;
+  const m=Math.floor(tSec/60), s=tSec%60;
+  const el=document.getElementById('tdisp');
+  el.textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  el.className='tdisp'+(tSec<=60?' danger':tSec<=300?' warn':'');
 }
 
-/* ── Media toggles ──────────────────────────────────── */
-function toggleMic() {
-  const on = RTC.toggleMic();
-  const btn = document.getElementById('btn-mic');
-  btn.textContent = on ? '🎤' : '🔇';
-  btn.classList.toggle('off', !on);
-  showToast(on ? 'Mikrofon yoqildi' : 'Mikrofon o\'chirildi');
+function timerReset(){
+  clearInterval(tIv); tRun=false; tSec=0;
+  document.getElementById('tdisp').textContent='00:00';
+  document.getElementById('tdisp').className='tdisp';
+  document.getElementById('tbtn').textContent='▶ Boshlash';
+  document.getElementById('tbtn').className='btn btn-primary btn-sm';
 }
 
-function toggleCam() {
-  const on = RTC.toggleCam();
-  const btn = document.getElementById('btn-cam');
-  btn.textContent = on ? '📹' : '🚫';
-  btn.classList.toggle('off', !on);
-  showToast(on ? 'Kamera yoqildi' : 'Kamera o\'chirildi');
+/* ── Questions ── */
+let selQ=null;
+function renderQ(){
+  const topic=document.getElementById('qtopic').value;
+  const diff=document.getElementById('qdiff').value;
+  const qs=(QUESTIONS[topic]||[]).filter(q=>diff==='all'||q.diff===diff);
+  const el=document.getElementById('qlist');
+  if(!qs.length){el.innerHTML='<div style="color:var(--muted);padding:14px;font-size:12px;text-align:center">Savol topilmadi</div>';return;}
+  el.innerHTML=qs.map(q=>`
+    <div class="qitem${q.id===selQ?' sel':''}" onclick="openQ(${q.id})">
+      <div class="qtitle">${q.title}</div>
+      <div class="qmeta"><span class="badge ${q.diff}">${q.diff}</span></div>
+    </div>`).join('');
 }
 
-/* ── Copy link ──────────────────────────────────────── */
-function copyLink() {
-  const link = document.getElementById('invite-input').value;
-  navigator.clipboard.writeText(link).then(() => showToast('Link nusxalandi! ✓'));
+function openQ(id){
+  const topic=document.getElementById('qtopic').value;
+  const q=(QUESTIONS[topic]||[]).find(x=>x.id===id);
+  if(!q)return;
+  selQ=id;
+  document.getElementById('qdtitle').textContent=q.title;
+  document.getElementById('qddesc').textContent=q.desc;
+  document.getElementById('qlist').style.display='none';
+  document.getElementById('qdetail').classList.add('open');
+  renderQ();
+  /* partnyorga ham yuborish */
+  RTC._wsSend({type:'question',id,title:q.title,desc:q.desc,topic});
 }
 
-/* ── End room (host only) ───────────────────────────── */
-async function endRoom() {
-  if (!confirm('Xonani tugatishni tasdiqlaysizmi?')) return;
-  RTC.hangup();
-  await fetch(`/api/rooms/{{ room.room_id }}/close/`, {
-    method: 'POST',
-    headers: { 'X-CSRFToken': getCookie('csrftoken') }
-  });
-  window.location.href = '/dashboard/';
+function closeQ(){
+  selQ=null;
+  document.getElementById('qlist').style.display='';
+  document.getElementById('qdetail').classList.remove('open');
 }
 
-function getCookie(name) {
-  const m = document.cookie.match('(^|;)\\s*' + name + '=([^;]+)');
-  return m ? m[2] : '';
-}
-
-/* ── Boot WebRTC ────────────────────────────────────── */
+/* ── WebRTC ── */
 RTC.init({
   roomId: ROOM_ID,
-  localVideoEl:  document.getElementById('local-video'),
-  remoteVideoEl: document.getElementById('remote-video'),
-
-  statusCb: (state) => {
-    const label = document.getElementById('conn-state-label');
-    label.textContent = 'Ulanish holati: ' + state;
-
-    if (state === 'camera_error') {
-      document.getElementById('local-overlay').style.display = 'flex';
-    }
-    if (state === 'camera_ok') {
-      document.getElementById('local-overlay').style.display = 'none';
-    }
+  localVideoEl:  document.getElementById('lv'),
+  remoteVideoEl: document.getElementById('rv'),
+  statusCb: s => {
+    if(s==='camera_error') document.getElementById('lover').style.display='flex';
+    if(s==='camera_ok')    document.getElementById('lover').style.display='none';
   },
-
-  joinedCb: (name) => showConnected(name || 'Partnyor'),
-  leftCb:   ()     => showDisconnected(),
+  joinedCb: name => {
+    document.getElementById('rover').style.display='none';
+    document.getElementById('rlabel').style.display='block';
+    document.getElementById('rlabel').textContent=name||'Partnyor';
+    setSt((name||'Partnyor')+' bilan ulangansiz','live');
+    toast('✅ '+(name||'Partnyor')+' ulandi');
+  },
+  leftCb: () => {
+    document.getElementById('rover').style.display='flex';
+    document.getElementById('rlabel').style.display='none';
+    setSt('Partnyorni kutmoqda…','waiting');
+    toast('Partnyor uzildi');
+  },
+  onData: msg => {
+    if(msg.type==='question'){
+      const t=document.getElementById('qtopic');
+      if(t.value!==msg.topic){t.value=msg.topic;renderQ();}
+      document.getElementById('qdtitle').textContent=msg.title;
+      document.getElementById('qddesc').textContent=msg.desc;
+      document.getElementById('qlist').style.display='none';
+      document.getElementById('qdetail').classList.add('open');
+      toast('📋 Yangi savol tanlandi');
+    }
+  }
 });
 
-/* Auto-focus room, clean up on page leave */
-window.addEventListener('beforeunload', () => RTC.hangup());
+/* ── Controls ── */
+function toggleMic(){
+  const on=RTC.toggleMic();
+  const b=document.getElementById('btn-mic');
+  b.textContent=on?'🎤':'🔇'; b.classList.toggle('off',!on);
+  toast(on?'Mikrofon yoqildi':'Mikrofon o\'chirildi');
+}
+function toggleCam(){
+  const on=RTC.toggleCam();
+  const b=document.getElementById('btn-cam');
+  b.textContent=on?'📹':'🚫'; b.classList.toggle('off',!on);
+  toast(on?'Kamera yoqildi':'Kamera o\'chirildi');
+}
+function copyLink(){
+  navigator.clipboard.writeText(document.getElementById('inv-url').value)
+    .then(()=>toast('Link nusxalandi ✓'));
+}
+async function endRoom(){
+  if(!confirm('Xonani tugatmoqchimisiz?'))return;
+  RTC.hangup();
+  await fetch('/api/rooms/{{ room.room_id }}/close/',{
+    method:'POST',headers:{'X-CSRFToken':getCookie('csrftoken')}
+  });
+  window.location.href='/dashboard/';
+}
+function getCookie(n){const m=document.cookie.match('(^|;)\\s*'+n+'=([^;]+)');return m?m[2]:'';}
+
+document.addEventListener('DOMContentLoaded',renderQ);
+window.addEventListener('beforeunload',()=>RTC.hangup());
 </script>
 {% endblock %}

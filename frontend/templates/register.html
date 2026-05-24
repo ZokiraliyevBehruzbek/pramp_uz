@@ -1,30 +1,17 @@
 {% extends 'base.html' %}
 {% block title %}Ro'yxatdan o'tish — PeerView{% endblock %}
 {% block bodyclass %}page-auth{% endblock %}
-
 {% block content %}
-<div class="auth-card">
+<div class="auth-box">
   <a href="/" class="brand">Peer<span>View</span></a>
-  <h1>Hisob yaratish</h1>
-  <p class="subtitle">Bepul va tez</p>
-
-  {% if error %}
-  <div class="alert alert-error">{{ error }}</div>
-  {% endif %}
-
+  <h1>Hisob yaratish</h1><p class="sub">Bepul</p>
+  {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
   <form method="post">
     {% csrf_token %}
-    <div class="form-group">
-      <label>Username</label>
-      <input name="username" type="text" placeholder="o'zingizga ism tanglang" autofocus required>
-    </div>
-    <div class="form-group">
-      <label>Parol (kamida 4 belgi)</label>
-      <input name="password" type="password" placeholder="••••••••" required>
-    </div>
-    <button type="submit" class="btn btn-primary btn-full">Hisob yaratish</button>
+    <div class="fg"><label>Username</label><input name="username" autofocus required placeholder="username"></div>
+    <div class="fg"><label>Parol (kamida 4 belgi)</label><input name="password" type="password" required placeholder="••••••"></div>
+    <button type="submit" class="btn btn-primary btn-full">Yaratish</button>
   </form>
-
-  <p class="switch">Hisobim bor. <a href="{% url 'login' %}">Kirish</a></p>
+  <p class="sw">Hisobim bor. <a href="{% url 'login' %}">Kirish</a></p>
 </div>
 {% endblock %}
