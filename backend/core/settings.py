@@ -64,6 +64,7 @@ CHANNEL_LAYERS = {
 }
 
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [FRONTEND_DIR / 'static']
 
 CORS_ALLOW_ALL_ORIGINS = True
