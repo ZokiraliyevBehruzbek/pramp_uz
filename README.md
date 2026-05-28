@@ -7,23 +7,23 @@ Pramp alternative
 2. cd Backend
 
 ```bash
-$ pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ```bash
-$ python manage.py makemigrations api
+python manage.py makemigrations api
 ```
 
 ```bash
-$ python manage.py migrate
+python manage.py migrate
 ```
 
 ```bash
-$ python manage.py collectstatic --noinput
+python manage.py collectstatic --noinput
 ```
 
 ```bash
-$ python manage.py runserver
+python manage.py runserver
 ```
 
 # If you create SuperUser(admin)
