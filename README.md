@@ -29,5 +29,5 @@ python manage.py runserver
 # If you create SuperUser(admin)
 
 ```bash
-$ python manage.py createsuperuser
+python manage.py createsuperuser
 ```
