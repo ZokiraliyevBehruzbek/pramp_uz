@@ -3,7 +3,7 @@ Pramp alternative
 
 
 # QUICK START COMMANDS:
-1. Create VENV
+1. Create VENV and Activate VENV 
 2. cd Backend
 
 ```bash
